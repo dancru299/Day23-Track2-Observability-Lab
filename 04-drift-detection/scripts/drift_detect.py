@@ -65,6 +65,51 @@ def kl_divergence(reference: np.ndarray, current: np.ndarray, bins: int = 20) ->
     return float(np.sum(ref_p * np.log(ref_p / cur_p)))
 
 
+def write_fallback_html(summary: dict[str, dict[str, float]], html_path: Path) -> None:
+    """Small self-contained report for environments without Evidently."""
+    rows = "\n".join(
+        (
+            "<tr>"
+            f"<td>{feature}</td>"
+            f"<td>{metrics['psi']}</td>"
+            f"<td>{metrics['kl']}</td>"
+            f"<td>{metrics['ks_stat']}</td>"
+            f"<td>{metrics['ks_pvalue']}</td>"
+            f"<td>{metrics['drift']}</td>"
+            "</tr>"
+        )
+        for feature, metrics in summary.items()
+    )
+    html = f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Day 23 Drift Report</title>
+  <style>
+    body {{ font-family: Arial, sans-serif; margin: 32px; color: #1f2937; }}
+    table {{ border-collapse: collapse; width: 100%; max-width: 960px; }}
+    th, td {{ border: 1px solid #d1d5db; padding: 8px 10px; text-align: left; }}
+    th {{ background: #f3f4f6; }}
+    .yes {{ color: #b91c1c; font-weight: 700; }}
+  </style>
+</head>
+<body>
+  <h1>Day 23 Drift Report</h1>
+  <p>Fallback HTML generated from PSI, KL, and KS scores because Evidently is not installed.</p>
+  <table>
+    <thead>
+      <tr><th>Feature</th><th>PSI</th><th>KL</th><th>KS stat</th><th>KS p-value</th><th>Drift</th></tr>
+    </thead>
+    <tbody>
+      {rows}
+    </tbody>
+  </table>
+</body>
+</html>
+"""
+    html_path.write_text(html, encoding="utf-8")
+
+
 def main() -> int:
     rng = np.random.default_rng(seed=42)
     reference = synth_dataset(rng, shifted=False)
@@ -94,18 +139,19 @@ def main() -> int:
     for col, m in summary.items():
         print(f"  {col:<20} PSI={m['psi']:.3f}  KL={m['kl']:.3f}  KS={m['ks_stat']:.3f}  drift={m['drift']}")
 
-    # Optional: full Evidently HTML report (large dependency, gracefully skip if missing)
+    html_path = REPORTS_DIR / "drift-report.html"
+    # Optional: full Evidently HTML report (large dependency, gracefully fallback if missing)
     try:
         from evidently.report import Report
         from evidently.metric_preset import DataDriftPreset
 
         report = Report(metrics=[DataDriftPreset()])
         report.run(reference_data=reference, current_data=current)
-        html_path = REPORTS_DIR / "drift-report.html"
         report.save_html(str(html_path))
         print(f"Wrote: {html_path}")
     except ImportError:
-        print("evidently not installed; skipping HTML report. Install with: pip install evidently")
+        write_fallback_html(summary, html_path)
+        print(f"evidently not installed; wrote fallback HTML report: {html_path}")
     return 0
 
 

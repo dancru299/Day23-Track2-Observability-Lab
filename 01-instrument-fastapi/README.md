@@ -27,6 +27,11 @@ A mock LLM inference service that emits **all 6 OTel signals**: metrics, traces,
 | `POST /predict` | Mock LLM inference (deterministic random latency) |
 | `GET /metrics` | Prometheus exposition |
 
+For trace screenshots, call `POST /predict` with `"slow": true` (or run
+`make trace`). That keeps the request above the collector's 2s tail-sampling
+threshold while still producing the `embed-text`, `vector-search`, and
+`generate-tokens` child spans.
+
 ## Run standalone (without the full stack)
 
 ```bash

@@ -12,6 +12,7 @@ import requests
 
 LAB = Path(__file__).resolve().parent.parent
 SUBMISSION = LAB / "submission"
+LOCAL = "http://127.0.0.1"
 
 
 def check(label: str, ok: bool, detail: str = "") -> bool:
@@ -44,24 +45,24 @@ def main() -> int:
     # 01-instrument-fastapi
     results.append(check(
         "01: app /healthz reachable",
-        http_ok("http://localhost:8000/healthz"),
+        http_ok(f"{LOCAL}:8000/healthz"),
     ))
     results.append(check(
         "01: /metrics exposes inference_requests_total",
         any("inference_requests_total" in line
-            for line in requests.get("http://localhost:8000/metrics", timeout=3).text.splitlines())
-        if http_ok("http://localhost:8000/metrics") else False,
+            for line in requests.get(f"{LOCAL}:8000/metrics", timeout=3).text.splitlines())
+        if http_ok(f"{LOCAL}:8000/metrics") else False,
     ))
 
     # 02-prometheus-grafana
-    results.append(check("02: Prometheus reachable", http_ok("http://localhost:9090/-/healthy")))
-    results.append(check("02: Grafana reachable", http_ok("http://localhost:3000/api/health")))
-    results.append(check("02: Alertmanager reachable", http_ok("http://localhost:9093/-/healthy")))
+    results.append(check("02: Prometheus reachable", http_ok(f"{LOCAL}:9090/-/healthy")))
+    results.append(check("02: Grafana reachable", http_ok(f"{LOCAL}:3000/api/health")))
+    results.append(check("02: Alertmanager reachable", http_ok(f"{LOCAL}:9093/-/healthy")))
 
     # Verify dashboards loaded (Grafana API)
     try:
         r = requests.get(
-            "http://localhost:3000/api/search?query=Day%2023",
+            f"{LOCAL}:3000/api/search?query=Day%2023",
             auth=("admin", "admin"),
             timeout=3,
         )
@@ -76,9 +77,9 @@ def main() -> int:
     ))
 
     # 03-tracing-and-logs
-    results.append(check("03: Jaeger UI reachable", http_ok("http://localhost:16686/")))
-    results.append(check("03: Loki ready", http_ok("http://localhost:3100/ready")))
-    results.append(check("03: OTel Collector self-metrics reachable", http_ok("http://localhost:8888/metrics")))
+    results.append(check("03: Jaeger UI reachable", http_ok(f"{LOCAL}:16686/")))
+    results.append(check("03: Loki ready", http_ok(f"{LOCAL}:3100/ready")))
+    results.append(check("03: OTel Collector self-metrics reachable", http_ok(f"{LOCAL}:8888/metrics")))
 
     # 04-drift-detection
     drift_summary = LAB / "04-drift-detection" / "reports" / "drift-summary.json"
